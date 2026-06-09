@@ -6,15 +6,7 @@
     "file": "tests/anatomy.json",
     "count": 199,
     "icon": "🫀"
-  },
-  {
-    "id": "patology",
-    "label": "Патология",
-    "sublabel": "2 семестр · 199 вопросов",
-    "file": "tests/patology.json",
-    "count": 199,
-    "icon": "🔬"
-  },
+  }, 
   {
     "id": "english_to_be",
     "label": "Using \"to be\"",
