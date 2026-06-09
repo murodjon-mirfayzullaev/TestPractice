@@ -3,113 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Тренажёр · Тесты</title>
+  <title>PrepKit · Тренажёр</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div id="app">
 
-  <!-- ── HOME ── -->
+  <!-- ═══════════════════════════════ HOME ═══════════════════════════════ -->
   <div id="screen-home" class="screen active">
+
     <nav class="topbar">
-      <div class="logo">Трена<span>жёр</span></div>
+      <div class="logo">
+        <div class="logo-mark">P</div>
+        <span>Prep<span class="logo-accent">Kit</span></span>
+      </div>
       <div class="test-selector-wrap">
-        <select class="test-selector" id="test-selector"></select>
+        <button class="test-selector-btn" id="test-selector-btn" onclick="openTestSheet()">
+          <span id="test-selector-label">Загрузка…</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
       </div>
-      <div class="topbar-right">
-        <button class="theme-btn" onclick="toggleTheme()" title="Сменить тему">☀️</button>
-      </div>
+      <button class="theme-btn" onclick="openThemeSheet()" title="Оформление">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2V4a8 8 0 1 0 0 16z"/>
+        </svg>
+      </button>
     </nav>
-    <div class="home-inner">
-      <div class="home-badge">📚 Подготовка к экзамену</div>
-      <h1 class="home-title">Тренажёр<br><span class="line2">знаний</span></h1>
-      <p class="home-sub" id="home-sub">Загрузка вопросов…</p>
-      <div class="home-actions">
-        <div class="home-primary-row">
-          <button class="btn-primary" onclick="startTest()">▶ Начать тест</button>
-          <button class="btn-icon" onclick="openSettings()" title="Настройки теста">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
+
+    <!-- Hero gradient section -->
+    <div class="home-hero">
+      <div class="hero-glow"></div>
+      <div class="hero-illustration">
+        <div class="hero-emoji-ring">
+          <span class="hero-emoji">🎓</span>
         </div>
-        <button class="btn-secondary" id="home-view-btn" onclick="showScreen('screen-allqs')">☰ Все вопросы</button>
+      </div>
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Подготовка к экзамену
+        </div>
+        <h1 class="hero-title">Готовься<br><span class="hero-accent">уверенно</span></h1>
+        <p class="hero-sub" id="home-sub">Загрузка…</p>
       </div>
     </div>
+
+    <!-- Action section -->
+    <div class="home-actions-wrap">
+      <div class="home-primary-row">
+        <button class="btn-primary" onclick="startTest()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Начать тест
+        </button>
+        <button class="btn-icon" onclick="openSettings()" title="Настройки">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+      <button class="btn-ghost" id="home-view-btn" onclick="showScreen('screen-allqs')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        Все вопросы
+      </button>
+    </div>
+
   </div>
 
-  <!-- ── ALL QUESTIONS ── -->
+  <!-- ══════════════════════════ ALL QUESTIONS ══════════════════════════ -->
   <div id="screen-allqs" class="screen">
     <nav class="topbar">
-      <button class="back-btn" onclick="showScreen('screen-home')">← Назад</button>
-      <div class="page-title" style="flex:1;padding:0 12px">Все вопросы</div>
+      <button class="icon-btn" onclick="showScreen('screen-home')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="topbar-title">Все вопросы</div>
       <div class="topbar-right">
-        <span class="q-count-badge" id="qs-count-badge">—</span>
-        <button class="theme-btn" onclick="toggleTheme()">☀️</button>
+        <span class="count-chip" id="qs-count-badge">—</span>
+        <button class="theme-btn" onclick="openThemeSheet()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2V4a8 8 0 1 0 0 16z"/></svg>
+        </button>
       </div>
     </nav>
-    <div class="search-bar">
-      <input class="search-input" type="text" placeholder="🔍  Поиск по вопросам…"
-             id="search-input" oninput="filterQs()">
+    <div class="search-wrap">
+      <div class="search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" type="text" placeholder="Поиск по вопросам…" id="search-input" oninput="filterQs()">
+      </div>
     </div>
     <div class="qs-list" id="qs-list"></div>
   </div>
 
-  <!-- ── TEST ── -->
+  <!-- ════════════════════════════ TEST ════════════════════════════════ -->
   <div id="screen-test" class="screen">
-    <div class="test-topbar">
-      <button class="back-btn"
-        onclick="if(confirm('Выйти из теста? Прогресс будет потерян.')) exitTest()">✕</button>
-      <div class="test-progress-wrap">
-        <div class="test-progress-bar" id="test-progress-bar" style="width:4%"></div>
-      </div>
-      <div class="test-topbar-right">
-        <div class="timer-display" id="timer-display" style="display:none">
-          <span class="timer-icon">⏱</span>
-          <span id="timer-text">25:00</span>
+
+    <!-- Fixed top: topbar + question -->
+    <div class="test-fixed-top">
+      <div class="test-topbar">
+        <button class="icon-btn" onclick="if(confirm('Выйти из теста? Прогресс будет потерян.')) exitTest()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="test-progress-track">
+          <div class="test-progress-bar" id="test-progress-bar" style="width:4%"></div>
         </div>
-        <div class="test-qnum" id="test-qnum">1 / 25</div>
-        <button class="theme-btn" onclick="toggleTheme()" title="Сменить тему">☀️</button>
+        <div class="test-topbar-meta">
+          <div class="timer-display" id="timer-display" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="timer-text">25:00</span>
+          </div>
+          <div class="test-qnum" id="test-qnum">1 / 25</div>
+          <button class="theme-btn sm" onclick="openThemeSheet()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2V4a8 8 0 1 0 0 16z"/></svg>
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="test-body">
-      <div class="test-inner">
+
+      <div class="test-question-wrap">
         <div class="q-type-chip single" id="q-type-chip">Один ответ</div>
         <div class="q-text" id="test-q-text"></div>
         <div class="hint-multi" id="hint-multi" style="display:none">
-          ☑ Выберите все правильные ответы (<strong id="hint-count">?</strong>)
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Выберите все правильные ответы — <strong id="hint-count">?</strong> шт.
         </div>
-        <div class="options" id="test-options"></div>
       </div>
     </div>
+
+    <!-- Scrollable: only answer options -->
+    <div class="test-scroll-body">
+      <div class="options" id="test-options"></div>
+    </div>
+
     <!-- Sticky bottom action bar -->
-    <div class="sticky-bar" id="test-sticky-bar">
+    <div class="sticky-bar">
       <button class="btn-next-sticky" id="btn-next-sticky" onclick="handleNext()" disabled>
-        <span id="btn-next-label">Следующий вопрос →</span>
+        <span id="btn-next-label">Следующий вопрос</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </div>
+
   </div>
 
-  <!-- ── RESULTS ── -->
+  <!-- ════════════════════════════ RESULTS ═════════════════════════════ -->
   <div id="screen-results" class="screen">
     <nav class="topbar">
-      <div class="logo">Трена<span>жёр</span></div>
-      <div class="topbar-right">
-        <button class="theme-btn" onclick="toggleTheme()">☀️</button>
+      <div class="logo">
+        <div class="logo-mark">P</div>
+        <span>Prep<span class="logo-accent">Kit</span></span>
       </div>
+      <button class="theme-btn" onclick="openThemeSheet()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2V4a8 8 0 1 0 0 16z"/></svg>
+      </button>
     </nav>
+
     <div class="result-body">
       <div class="result-inner">
 
-        <div class="result-hero anim-scalein">
+        <!-- Score hero card -->
+        <div class="score-card anim-scalein">
+          <div class="score-card-bg"></div>
           <div class="score-ring-wrap">
             <svg width="140" height="140" viewBox="0 0 140 140">
-              <circle cx="70" cy="70" r="60" fill="none" stroke="var(--surface3)" stroke-width="12"/>
-              <circle id="score-arc" cx="70" cy="70" r="60" fill="none" stroke="var(--accent)"
+              <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+              <circle id="score-arc" cx="70" cy="70" r="60" fill="none" stroke="white"
                 stroke-width="12" stroke-linecap="round"
                 stroke-dasharray="376.99" stroke-dashoffset="376.99"
                 style="transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"/>
@@ -122,44 +178,54 @@
           <div class="result-title" id="result-title">Отличная работа!</div>
           <div class="result-sub" id="result-sub">Вы завершили тест</div>
           <div class="result-chips">
-            <div class="rchip green" id="rc-correct">✓ 0 правильно</div>
+            <div class="rchip green" id="rc-correct">✓ 0 верно</div>
             <div class="rchip red" id="rc-wrong">✗ 0 ошибок</div>
-            <div class="rchip blue" id="rc-total">25 вопросов</div>
+            <div class="rchip white" id="rc-total">25 вопросов</div>
           </div>
         </div>
 
+        <!-- Review tabs -->
         <div class="result-tabs">
           <button class="rtab active" id="tab-all" onclick="switchTab('all')">Все</button>
           <button class="rtab" id="tab-wrong" onclick="switchTab('wrong')">Ошибки <span id="tab-wrong-count"></span></button>
           <button class="rtab" id="tab-right" onclick="switchTab('right')">Верные <span id="tab-right-count"></span></button>
         </div>
 
+        <!-- Review list (collapsible) -->
         <div class="review-list" id="review-list"></div>
 
-        <!-- spacer so content isn't hidden behind sticky bar -->
-        <div style="height: 88px"></div>
+        <div style="height:88px"></div>
       </div>
     </div>
-    <!-- Sticky bottom bar -->
+
     <div class="sticky-bar">
-      <button class="btn-home-sticky" onclick="showScreen('screen-home')">🏠 На главную</button>
+      <button class="btn-home-sticky" onclick="showScreen('screen-home')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        На главную
+      </button>
     </div>
   </div>
 
-</div>
+</div><!-- /#app -->
 
-<!-- ── SETTINGS BOTTOM SHEET ── -->
-<div class="sheet-overlay" id="sheet-overlay" onclick="closeSettings()"></div>
+<!-- ══════════════════════ SHARED OVERLAY ══════════════════════ -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeAllSheets()"></div>
+
+<!-- ══════════════════════ SETTINGS SHEET ══════════════════════ -->
 <div class="bottom-sheet" id="settings-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <div class="sheet-title">Настройки теста</div>
-    <button class="sheet-close" onclick="closeSettings()">✕</button>
+    <button class="sheet-close" onclick="closeAllSheets()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
   </div>
 
-  <!-- Number of questions -->
   <div class="sheet-section">
-    <div class="sheet-label">Количество вопросов</div>
+    <div class="sheet-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Количество вопросов
+    </div>
     <div class="pill-group" id="num-pills">
       <button class="pill-opt" data-val="10">10</button>
       <button class="pill-opt" data-val="20">20</button>
@@ -171,11 +237,15 @@
            placeholder="Введите число (1–199)" min="1" max="199" style="display:none">
   </div>
 
-  <!-- Timer toggle -->
+  <div class="sheet-divider"></div>
+
   <div class="sheet-section">
     <div class="sheet-row">
       <div>
-        <div class="sheet-label">Таймер</div>
+        <div class="sheet-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Таймер
+        </div>
         <div class="sheet-sublabel">Ограничить время теста</div>
       </div>
       <label class="toggle-switch">
@@ -185,7 +255,6 @@
     </div>
   </div>
 
-  <!-- Timer duration -->
   <div class="sheet-section" id="timer-duration-section" style="display:none">
     <div class="sheet-label">Длительность</div>
     <div class="pill-group" id="dur-pills">
@@ -198,10 +267,72 @@
            placeholder="Минут" min="1" style="display:none">
   </div>
 
-  <!-- Actions -->
   <div class="sheet-actions">
-    <button class="btn-secondary sheet-btn" onclick="resetSettings()">Сбросить</button>
+    <button class="btn-ghost sheet-btn" onclick="resetSettings()">Сбросить</button>
     <button class="btn-primary sheet-btn" onclick="saveSettings()">Сохранить</button>
+  </div>
+</div>
+
+<!-- ══════════════════════ THEME SHEET ══════════════════════ -->
+<div class="bottom-sheet" id="theme-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Оформление</div>
+    <button class="sheet-close" onclick="closeAllSheets()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="sheet-section">
+    <div class="sheet-label">Тема интерфейса</div>
+    <div class="theme-mode-row">
+      <button class="theme-mode-btn" data-mode="dark" onclick="setThemeMode('dark')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        Тёмная
+      </button>
+      <button class="theme-mode-btn" data-mode="light" onclick="setThemeMode('light')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        Светлая
+      </button>
+    </div>
+  </div>
+
+  <div class="sheet-divider"></div>
+
+  <div class="sheet-section">
+    <div class="sheet-label">Цвет акцента</div>
+    <div class="palette-row">
+      <button class="palette-chip" data-palette="green" onclick="setPalette('green')">
+        <span class="palette-swatch" style="background:#10B981"></span>
+        Зелёный
+      </button>
+      <button class="palette-chip" data-palette="purple" onclick="setPalette('purple')">
+        <span class="palette-swatch" style="background:#8B5CF6"></span>
+        Фиолет
+      </button>
+      <button class="palette-chip" data-palette="red" onclick="setPalette('red')">
+        <span class="palette-swatch" style="background:#EF4444"></span>
+        Красный
+      </button>
+      <button class="palette-chip" data-palette="yellow" onclick="setPalette('yellow')">
+        <span class="palette-swatch" style="background:#F59E0B"></span>
+        Жёлтый
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ TEST SELECTOR SHEET ══════════════════════ -->
+<div class="bottom-sheet" id="test-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Выбор теста</div>
+    <button class="sheet-close" onclick="closeAllSheets()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="test-option-list" id="test-option-list">
+    <!-- populated by JS from tests/index.json -->
   </div>
 </div>
 

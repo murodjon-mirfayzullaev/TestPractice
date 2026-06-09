@@ -1,200 +1,309 @@
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let allQuestions = [];
-let testQuestions = [];
-let currentIndex = 0;
-let answers = [];
-let activeTab = 'all';
-let darkMode = localStorage.getItem('theme') !== 'light';
+// ══════════════════════════════════════════════════════
+//  PrepKit — App Logic
+// ══════════════════════════════════════════════════════
 
-// Timer
-let timerInterval = null;
-let timerSecondsLeft = 0;
-
-// Settings (persisted in localStorage)
-let settings = {
-  numQuestions: 25,
-  timerEnabled: false,
-  timerMinutes: 25
+// ── Palette definitions ───────────────────────────────
+const PALETTES = {
+  green: {
+    '--accent':      '#10B981',
+    '--accent2':     '#059669',
+    '--accent-soft': 'rgba(16,185,129,0.15)',
+    '--accent-glow': 'rgba(16,185,129,0.28)',
+    '--hero-from':   '#065F46',
+    '--hero-to':     '#022C22',
+  },
+  purple: {
+    '--accent':      '#8B5CF6',
+    '--accent2':     '#7C3AED',
+    '--accent-soft': 'rgba(139,92,246,0.18)',
+    '--accent-glow': 'rgba(139,92,246,0.30)',
+    '--hero-from':   '#7C3AED',
+    '--hero-to':     '#3B1A7A',
+  },
+  red: {
+    '--accent':      '#EF4444',
+    '--accent2':     '#DC2626',
+    '--accent-soft': 'rgba(239,68,68,0.15)',
+    '--accent-glow': 'rgba(239,68,68,0.28)',
+    '--hero-from':   '#991B1B',
+    '--hero-to':     '#450A0A',
+  },
+  yellow: {
+    '--accent':      '#F59E0B',
+    '--accent2':     '#D97706',
+    '--accent-soft': 'rgba(245,158,11,0.15)',
+    '--accent-glow': 'rgba(245,158,11,0.28)',
+    '--hero-from':   '#92400E',
+    '--hero-to':     '#451A03',
+  },
 };
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────
+let allQuestions  = [];
+let testQuestions = [];
+let testsList     = [];
+let currentIndex  = 0;
+let answers       = [];
+let activeTab     = 'all';
+let isTestActive  = false;
+
+let darkMode       = localStorage.getItem('theme') !== 'light';
+let currentPalette = localStorage.getItem('palette') || 'green';
+
+let timerInterval    = null;
+let timerSecondsLeft = 0;
+
+let settings = { numQuestions: 25, timerEnabled: false, timerMinutes: 25 };
+
+// ── Refresh guard ─────────────────────────────────────
+window.addEventListener('beforeunload', e => {
+  if (!isTestActive) return;
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+
+// ── Init ─────────────────────────────────────────────
 async function init() {
   loadSettingsFromStorage();
   applyTheme();
-  syncThemeBtn();
+  applyPalette(currentPalette);
+  syncThemeModeBtns();
+  syncPaletteChips();
   await loadTestIndex();
   initSettingsSheet();
 }
 
 async function loadTestIndex() {
   try {
-    const res = await fetch('tests/index.json');
+    const res   = await fetch('tests/index.json');
     const tests = await res.json();
-    populateSelector(tests);
-    if (tests.length > 0) await loadTest(tests[0].file, tests[0]);
-  } catch (e) {
-    console.error('Failed to load test index', e);
-  }
+    testsList = tests;
+    buildTestSheet(tests);
+    if (tests.length > 0) {
+      document.getElementById('test-selector-label').textContent = tests[0].label;
+      await loadTest(tests[0].file);
+    }
+  } catch (e) { console.error('Failed to load test index', e); }
 }
 
-function populateSelector(tests) {
-  const sel = document.getElementById('test-selector');
-  sel.innerHTML = '';
-  tests.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t.file;
-    opt.textContent = t.label;
-    opt.dataset.count = t.count;
-    sel.appendChild(opt);
-  });
-  sel.addEventListener('change', async () => {
-    const opt = sel.options[sel.selectedIndex];
-    await loadTest(sel.value, { label: opt.textContent, count: opt.dataset.count });
-    showScreen('screen-home');
-  });
-}
-
-async function loadTest(file, meta) {
+async function loadTest(file) {
   try {
     const res = await fetch(file);
     allQuestions = await res.json();
     updateHomeText();
     buildAllQsList(allQuestions);
-  } catch (e) {
-    console.error('Failed to load test file', e);
-  }
+  } catch (e) { console.error('Failed to load test', e); }
 }
 
 function updateHomeText() {
   const count = allQuestions.length;
   const n = Math.min(settings.numQuestions, count);
   document.getElementById('home-sub').textContent =
-    `${count} вопросов · В тесте ${n} случайных`;
-  document.getElementById('home-view-btn').textContent =
-    `☰ Все вопросы (${count})`;
+    `${count} вопросов · ${n} случайных в тесте`;
+  const btn = document.getElementById('home-view-btn');
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg> Все вопросы (${count})`;
 }
 
-// ── THEME ─────────────────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────
 function applyTheme() {
   if (!darkMode) document.documentElement.setAttribute('data-theme', 'light');
-  else document.documentElement.removeAttribute('data-theme');
+  else           document.documentElement.removeAttribute('data-theme');
 }
 
-function syncThemeBtn() {
-  document.querySelectorAll('.theme-btn').forEach(b => {
-    b.textContent = darkMode ? '☀️' : '🌙';
+function setThemeMode(mode) {
+  darkMode = (mode === 'dark');
+  localStorage.setItem('theme', mode);
+  applyTheme();
+  syncThemeModeBtns();
+}
+
+function syncThemeModeBtns() {
+  document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === (darkMode ? 'dark' : 'light'));
   });
 }
 
-function toggleTheme() {
-  darkMode = !darkMode;
-  localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-  applyTheme();
-  syncThemeBtn();
+// ── Palette ───────────────────────────────────────────
+function applyPalette(name) {
+  const p = PALETTES[name];
+  if (!p) return;
+  const root = document.documentElement;
+  Object.entries(p).forEach(([k, v]) => root.style.setProperty(k, v));
 }
 
-// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function setPalette(name) {
+  currentPalette = name;
+  localStorage.setItem('palette', name);
+  applyPalette(name);
+  syncPaletteChips();
+}
+
+function syncPaletteChips() {
+  document.querySelectorAll('.palette-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.palette === currentPalette);
+  });
+}
+
+// ── Navigation ────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
 }
-
 function exitTest() {
+  isTestActive = false;
   stopTimer();
   showScreen('screen-home');
 }
 
-// ── ALL QUESTIONS ─────────────────────────────────────────────────────────────
+// ── Bottom Sheets ─────────────────────────────────────
+function openSheet(id) {
+  // Close any previously open sheet first
+  ['settings-sheet', 'theme-sheet', 'test-sheet'].forEach(s => {
+    document.getElementById(s)?.classList.remove('open');
+  });
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+
+function closeAllSheets() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  ['settings-sheet', 'theme-sheet', 'test-sheet'].forEach(id => {
+    document.getElementById(id)?.classList.remove('open');
+  });
+}
+
+function openSettings()   { openSheet('settings-sheet'); }
+function openThemeSheet() { openSheet('theme-sheet'); }
+function openTestSheet()  { openSheet('test-sheet'); }
+
+// ── Test selector sheet ───────────────────────────────
+function buildTestSheet(tests) {
+  const list = document.getElementById('test-option-list');
+  list.innerHTML = tests.map((t, i) => `
+    <div class="test-option-item ${i === 0 ? 'active' : ''}" data-index="${i}" onclick="selectTest(${i})">
+      <span class="test-option-icon">${t.icon || '📚'}</span>
+      <div class="test-option-info">
+        <div class="test-option-name">${t.label}</div>
+        <div class="test-option-sub">${t.sublabel || (t.count + ' вопросов')}</div>
+      </div>
+      <svg class="test-option-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+  `).join('');
+}
+
+function selectTest(idx) {
+  const t = testsList[idx];
+  if (!t) return;
+  // Update active state in sheet
+  document.querySelectorAll('.test-option-item').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  // Update topbar label
+  document.getElementById('test-selector-label').textContent = t.label;
+  // Load test data
+  loadTest(t.file);
+  closeAllSheets();
+  showScreen('screen-home');
+}
+
+// ── All Questions ─────────────────────────────────────
 function buildAllQsList(list) {
   const cont = document.getElementById('qs-list');
   cont.innerHTML = '';
+
   list.forEach(q => {
     const ai = allQuestions.indexOf(q);
+    const isMulti = q.c.length > 1;
     const div = document.createElement('div');
     div.className = 'q-item';
+
     const correctHtml = q.c.map(a =>
       `<div class="ans-row correct"><div class="ans-dot correct"></div>${a}</div>`
     ).join('');
     const wrongHtml = q.w.map(a =>
       `<div class="ans-row wrong"><div class="ans-dot wrong"></div>${a}</div>`
     ).join('');
+
     div.innerHTML = `
-      <div class="q-item-num">Вопрос ${ai + 1} · ${q.c.length > 1 ? '☑ несколько ответов' : '○ один ответ'}</div>
-      <div class="q-item-text">${q.q}</div>
+      <div class="q-item-header">
+        <div class="q-item-badge num">${ai + 1}</div>
+        <div class="q-item-meta">
+          <div class="q-item-num">${isMulti ? '☑ несколько' : '○ один ответ'}</div>
+          <div class="q-item-text">${q.q}</div>
+        </div>
+        <svg class="q-item-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
       <div class="q-item-answers">${correctHtml}${wrongHtml}</div>
     `;
     div.addEventListener('click', () => div.classList.toggle('open'));
     cont.appendChild(div);
   });
+
   document.getElementById('qs-count-badge').textContent = list.length;
 }
 
 function filterQs() {
   const term = document.getElementById('search-input').value.toLowerCase();
-  const filtered = term
-    ? allQuestions.filter(q =>
-        q.q.toLowerCase().includes(term) ||
-        q.c.some(a => a.toLowerCase().includes(term))
-      )
-    : allQuestions;
-  buildAllQsList(filtered);
+  buildAllQsList(
+    term ? allQuestions.filter(q =>
+      q.q.toLowerCase().includes(term) || q.c.some(a => a.toLowerCase().includes(term))
+    ) : allQuestions
+  );
 }
 
-// ── TEST ──────────────────────────────────────────────────────────────────────
-function shuffle(arr) {
-  return arr.slice().sort(() => Math.random() - 0.5);
-}
+// ── Test ──────────────────────────────────────────────
+function shuffle(arr) { return arr.slice().sort(() => Math.random() - 0.5); }
 
 function startTest() {
-  if (allQuestions.length === 0) return;
+  if (!allQuestions.length) return;
   const n = Math.min(settings.numQuestions, allQuestions.length);
   testQuestions = shuffle(allQuestions).slice(0, n);
-  currentIndex = 0;
-  answers = new Array(testQuestions.length).fill(null);
+  currentIndex  = 0;
+  answers       = new Array(n).fill(null);
+  isTestActive  = true;
   showScreen('screen-test');
   renderQuestion();
-  if (settings.timerEnabled) startTimer(settings.timerMinutes * 60);
-  else stopTimer();
+  settings.timerEnabled ? startTimer(settings.timerMinutes * 60) : stopTimer();
 }
 
 function renderQuestion() {
-  const q = testQuestions[currentIndex];
+  const q     = testQuestions[currentIndex];
   const total = testQuestions.length;
   const isMulti = q.c.length > 1;
-  const isLast = currentIndex === total - 1;
+  const isLast  = currentIndex === total - 1;
 
   document.getElementById('test-qnum').textContent = `${currentIndex + 1} / ${total}`;
   document.getElementById('test-progress-bar').style.width = `${((currentIndex + 1) / total) * 100}%`;
   document.getElementById('test-q-text').textContent = q.q;
 
   const chip = document.getElementById('q-type-chip');
-  chip.textContent = isMulti ? `☑ Несколько ответов (${q.c.length})` : '○ Один ответ';
-  chip.className = 'q-type-chip ' + (isMulti ? 'multi' : 'single');
+  chip.textContent = isMulti ? `Несколько ответов · ${q.c.length}` : 'Один правильный ответ';
+  chip.className   = 'q-type-chip ' + (isMulti ? 'multi' : 'single');
 
   const hint = document.getElementById('hint-multi');
-  hint.style.display = isMulti ? 'block' : 'none';
+  hint.style.display = isMulti ? 'flex' : 'none';
   if (isMulti) document.getElementById('hint-count').textContent = q.c.length;
 
-  // Sticky next button
   const btn = document.getElementById('btn-next-sticky');
   const lbl = document.getElementById('btn-next-label');
-  btn.disabled = true;
-  btn.className = 'btn-next-sticky' + (isLast ? ' finish' : '');
-  lbl.textContent = isLast ? 'Завершить тест 🎉' : 'Следующий вопрос →';
+  btn.disabled    = true;
+  btn.className   = 'btn-next-sticky' + (isLast ? ' finish' : '');
+  lbl.textContent = isLast ? 'Завершить тест' : 'Следующий вопрос';
 
-  // Render options
   const allOpts = shuffle([...q.c, ...q.w]);
-  const cont = document.getElementById('test-options');
+  const cont    = document.getElementById('test-options');
   cont.innerHTML = '';
+
   allOpts.forEach(opt => {
     const div = document.createElement('div');
-    div.className = 'opt-btn';
+    div.className   = 'opt-btn';
     div.dataset.val = opt;
     const t = isMulti ? 'checkbox' : 'radio';
     div.innerHTML = `
       <div class="opt-control">
-        <input type="${t}" name="opt" value="${opt.replace(/"/g, '&quot;')}" style="pointer-events:none">
+        <input type="${t}" name="opt" value="${opt.replace(/"/g,'&quot;')}" style="pointer-events:none">
       </div>
       <div class="opt-label">${opt}</div>
     `;
@@ -216,29 +325,25 @@ function handleOptClick(div, isMulti) {
     inp.checked = !inp.checked;
     div.classList.toggle('selected', inp.checked);
   }
-  // Enable button as soon as something is selected
-  const anySelected = !!document.querySelectorAll('.opt-btn input:checked').length;
-  document.getElementById('btn-next-sticky').disabled = !anySelected;
+  document.getElementById('btn-next-sticky').disabled =
+    !document.querySelectorAll('.opt-btn input:checked').length;
 }
 
 function handleNext() {
-  // Record answer silently
-  const q = testQuestions[currentIndex];
+  const q        = testQuestions[currentIndex];
   const selected = [...document.querySelectorAll('.opt-btn input:checked')].map(i => i.value);
-  const selectedSet = new Set(selected);
-  const isRight = q.c.length === selected.length && q.c.every(c => selectedSet.has(c));
-  answers[currentIndex] = { q: q.q, selected, correct: q.c, isRight };
+  const selSet   = new Set(selected);
+  const isRight  = q.c.length === selected.length && q.c.every(c => selSet.has(c));
 
-  const isLast = currentIndex === testQuestions.length - 1;
-  if (isLast) {
-    showResults();
-  } else {
-    currentIndex++;
-    renderQuestion();
-  }
+  // Store all wrong options too (for full answer review in results)
+  answers[currentIndex] = {
+    q: q.q, selected, correct: q.c, allWrong: q.w || [], isRight
+  };
+
+  currentIndex === testQuestions.length - 1 ? showResults() : (currentIndex++, renderQuestion());
 }
 
-// ── TIMER ─────────────────────────────────────────────────────────────────────
+// ── Timer ─────────────────────────────────────────────
 function startTimer(seconds) {
   stopTimer();
   timerSecondsLeft = seconds;
@@ -248,59 +353,51 @@ function startTimer(seconds) {
   timerInterval = setInterval(() => {
     timerSecondsLeft--;
     updateTimerDisplay();
-    if (timerSecondsLeft <= 0) {
-      stopTimer();
-      showResults();
-    }
+    if (timerSecondsLeft <= 0) { stopTimer(); showResults(); }
   }, 1000);
 }
-
 function stopTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  const display = document.getElementById('timer-display');
-  if (display) display.style.display = 'none';
+  const d = document.getElementById('timer-display');
+  if (d) d.style.display = 'none';
 }
-
 function updateTimerDisplay() {
-  const mins = Math.floor(timerSecondsLeft / 60);
-  const secs = timerSecondsLeft % 60;
+  const m = Math.floor(timerSecondsLeft / 60);
+  const s = timerSecondsLeft % 60;
   document.getElementById('timer-text').textContent =
-    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  const display = document.getElementById('timer-display');
-  if (timerSecondsLeft <= 60) display.classList.add('danger');
-  else display.classList.remove('danger');
+    `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const d = document.getElementById('timer-display');
+  timerSecondsLeft <= 60 ? d.classList.add('danger') : d.classList.remove('danger');
 }
 
-// ── RESULTS ───────────────────────────────────────────────────────────────────
+// ── Results ───────────────────────────────────────────
 function showResults() {
+  isTestActive = false;
   stopTimer();
-  const correct = answers.filter(a => a && a.isRight).length;
-  const total = testQuestions.length;
-  const pct = Math.round((correct / total) * 100);
+  const correct = answers.filter(a => a?.isRight).length;
+  const total   = testQuestions.length;
+  const pct     = Math.round((correct / total) * 100);
 
   showScreen('screen-results');
 
-  // Animate score ring (r=60 → circumference = 2π×60 ≈ 376.99)
   setTimeout(() => {
-    const circ = 2 * Math.PI * 60;
+    const circ   = 2 * Math.PI * 60;
     const offset = circ - (pct / 100) * circ;
-    const arc = document.getElementById('score-arc');
-    arc.style.stroke = pct >= 80 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
-    arc.setAttribute('stroke-dashoffset', offset.toFixed(1));
+    document.getElementById('score-arc').setAttribute('stroke-dashoffset', offset.toFixed(1));
     document.getElementById('score-pct-text').textContent = pct + '%';
-  }, 100);
+  }, 120);
 
-  const titles =
-    pct >= 90 ? ['🏆 Превосходно!', 'Вы настоящий эксперт по анатомии'] :
+  const [title, sub] =
+    pct >= 90 ? ['🏆 Превосходно!', 'Вы настоящий эксперт!'] :
     pct >= 72 ? ['✅ Хорошо!', 'Вы бы сдали этот тест'] :
-    pct >= 50 ? ['📚 Неплохо', 'Ещё немного практики — и будет отлично'] :
-                ['💪 Продолжайте!', 'Больше повторений — больше уверенности'];
+    pct >= 50 ? ['📚 Неплохо', 'Ещё немного — и будет отлично'] :
+                ['💪 Не сдавайтесь!', 'Повторите материал и попробуйте снова'];
 
-  document.getElementById('result-title').textContent = titles[0];
-  document.getElementById('result-sub').textContent = titles[1];
-  document.getElementById('rc-correct').textContent = `✓ ${correct} правильно`;
-  document.getElementById('rc-wrong').textContent = `✗ ${total - correct} ошибок`;
-  document.getElementById('rc-total').textContent = `${total} вопросов`;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent   = sub;
+  document.getElementById('rc-correct').textContent   = `✓ ${correct} верно`;
+  document.getElementById('rc-wrong').textContent     = `✗ ${total - correct} ошибок`;
+  document.getElementById('rc-total').textContent     = `${total} вопросов`;
   document.getElementById('tab-wrong-count').textContent = `(${total - correct})`;
   document.getElementById('tab-right-count').textContent = `(${correct})`;
 
@@ -319,14 +416,15 @@ function switchTab(tab) {
   renderReview(tab);
 }
 
+// Render review with ALL answer options, tagged: Верно / Ваш ответ / Ошибка
 function renderReview(tab) {
   const list = document.getElementById('review-list');
   let toShow = answers.filter(Boolean);
   if (tab === 'wrong') toShow = toShow.filter(a => !a.isRight);
-  if (tab === 'right') toShow = toShow.filter(a => a.isRight);
+  if (tab === 'right') toShow = toShow.filter(a =>  a.isRight);
 
   if (!toShow.length) {
-    list.innerHTML = `<div class="no-mistakes">
+    list.innerHTML = `<div class="no-results">
       <div class="big">${tab === 'wrong' ? '🎉' : '📝'}</div>
       ${tab === 'wrong' ? 'Ошибок нет — отличный результат!' : 'Нет правильных ответов'}
     </div>`;
@@ -335,197 +433,190 @@ function renderReview(tab) {
 
   list.innerHTML = toShow.map(a => {
     const correctSet = new Set(a.correct);
-    const selectedSet = new Set(a.selected);
-    const wrongPicked = a.selected.filter(s => !correctSet.has(s));
-    let html = '';
+    const selSet     = new Set(a.selected);
+    const allWrong   = a.allWrong || [];
 
-    if (a.isRight) {
-      a.correct.forEach(c => {
-        html += `<div class="review-ans your-right">
-          <div class="review-ans-dot" style="background:var(--green)"></div>
-          <span><span class="review-ans-label">✓</span>${c}</span>
-        </div>`;
-      });
-    } else {
-      wrongPicked.forEach(w => {
-        html += `<div class="review-ans your-wrong">
-          <div class="review-ans-dot" style="background:var(--red)"></div>
-          <span><span class="review-ans-label">Ваш:</span>${w}</span>
-        </div>`;
-      });
-      a.correct.filter(c => !selectedSet.has(c)).forEach(c => {
-        html += `<div class="review-ans correct-ans">
-          <div class="review-ans-dot" style="background:var(--green)"></div>
-          <span><span class="review-ans-label">Верно:</span>${c}</span>
-        </div>`;
-      });
-    }
+    // Order: correct answers → wrong options the user picked → other wrong options
+    const allOptions = [
+      ...a.correct,
+      ...allWrong.filter(w =>  selSet.has(w)),
+      ...allWrong.filter(w => !selSet.has(w)),
+    ];
 
-    return `<div class="review-card ${a.isRight ? 'correct-card' : 'wrong-card'}">
-      <div class="review-header">
-        <div class="review-badge ${a.isRight ? 'c' : 'w'}">${a.isRight ? '✓' : '✗'}</div>
-        <div class="review-q">${a.q}</div>
-      </div>
-      <div class="review-body">${html}</div>
-    </div>`;
+    const optsHtml = allOptions.map(opt => {
+      const isCorrect = correctSet.has(opt);
+      const wasChosen = selSet.has(opt);
+      let cls = 'result-opt ';
+      let tags = '';
+
+      if (isCorrect && wasChosen) {
+        cls += 'ro-correct-chosen';
+        tags = `<span class="rtag rtag-true">Верно</span><span class="rtag rtag-chosen">Ваш ответ</span>`;
+      } else if (isCorrect && !wasChosen) {
+        cls += 'ro-correct-missed';
+        tags = `<span class="rtag rtag-true">Верно</span>`;
+      } else if (!isCorrect && wasChosen) {
+        cls += 'ro-wrong-chosen';
+        tags = `<span class="rtag rtag-chosen">Ваш ответ</span><span class="rtag rtag-wrong">Ошибка</span>`;
+      } else {
+        cls += 'ro-neutral';
+      }
+
+      return `<div class="${cls}">
+        <span>${opt}</span>
+        ${tags ? `<div class="result-opt-tags">${tags}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    const hintHtml = a.isRight
+      ? `<div class="result-hint ok">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Все правильные ответы выбраны верно!
+        </div>`
+      : `<div class="result-hint err">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Обратите внимание на правильные ответы выше
+        </div>`;
+
+    return `
+      <div class="q-item ${a.isRight ? 'correct-item' : 'wrong-item'}" onclick="this.classList.toggle('open')">
+        <div class="q-item-header">
+          <div class="q-item-badge ${a.isRight ? 'c' : 'w'}">${a.isRight ? '✓' : '✗'}</div>
+          <div class="q-item-meta">
+            <div class="q-item-num">${a.isRight ? 'Правильно' : 'Ошибка'}</div>
+            <div class="q-item-text">${a.q}</div>
+          </div>
+          <svg class="q-item-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div class="q-item-answers">
+          ${optsHtml}
+          ${hintHtml}
+        </div>
+      </div>`;
   }).join('');
 }
 
-// ── SETTINGS SHEET ────────────────────────────────────────────────────────────
+// ── Settings ──────────────────────────────────────────
 function loadSettingsFromStorage() {
-  const saved = localStorage.getItem('quiz_settings');
-  if (saved) {
-    try { Object.assign(settings, JSON.parse(saved)); } catch (e) {}
-  }
+  try { Object.assign(settings, JSON.parse(localStorage.getItem('quiz_settings') || '{}')); }
+  catch (e) {}
 }
-
 function saveSettingsToStorage() {
   localStorage.setItem('quiz_settings', JSON.stringify(settings));
 }
 
 function initSettingsSheet() {
-  // Set pill active states from current settings
   setActivePill('num-pills', settings.numQuestions);
   document.getElementById('timer-toggle').checked = settings.timerEnabled;
   document.getElementById('timer-duration-section').style.display =
     settings.timerEnabled ? 'block' : 'none';
   setActivePill('dur-pills', settings.timerMinutes);
 
-  // Show custom inputs if needed
-  if (!['10','20','25','50'].includes(String(settings.numQuestions))) {
+  if (!['10','20','25','50'].includes(String(settings.numQuestions)))
     showCustomInput('num-custom', settings.numQuestions);
-  }
-  if (settings.timerEnabled && !['10','20','25'].includes(String(settings.timerMinutes))) {
+  if (settings.timerEnabled && !['10','20','25'].includes(String(settings.timerMinutes)))
     showCustomInput('dur-custom', settings.timerMinutes);
-  }
 
-  // Wire up pill clicks
   wirePills('num-pills', 'num-custom');
   wirePills('dur-pills', 'dur-custom');
 }
 
-function wirePills(groupId, customInputId) {
+function wirePills(groupId, customId) {
   document.querySelectorAll(`#${groupId} .pill-opt`).forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll(`#${groupId} .pill-opt`).forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const customInput = document.getElementById(customInputId);
-      if (btn.dataset.val === 'custom') {
-        customInput.style.display = 'block';
-        customInput.focus();
-      } else {
-        customInput.style.display = 'none';
-        customInput.value = '';
-      }
+      const inp = document.getElementById(customId);
+      if (btn.dataset.val === 'custom') { inp.style.display = 'block'; inp.focus(); }
+      else { inp.style.display = 'none'; inp.value = ''; }
     });
   });
 }
 
 function setActivePill(groupId, val) {
   const pills = document.querySelectorAll(`#${groupId} .pill-opt`);
-  const known = Array.from(pills)
-    .filter(p => p.dataset.val !== 'custom')
-    .map(p => p.dataset.val);
-
+  const known = Array.from(pills).filter(p => p.dataset.val !== 'custom').map(p => p.dataset.val);
   pills.forEach(p => p.classList.remove('active'));
-
   if (known.includes(String(val))) {
-    const target = document.querySelector(`#${groupId} .pill-opt[data-val="${val}"]`);
-    if (target) target.classList.add('active');
+    document.querySelector(`#${groupId} .pill-opt[data-val="${val}"]`)?.classList.add('active');
   } else {
-    const customPill = document.querySelector(`#${groupId} .pill-opt[data-val="custom"]`);
-    if (customPill) customPill.classList.add('active');
+    document.querySelector(`#${groupId} .pill-opt[data-val="custom"]`)?.classList.add('active');
   }
 }
 
 function showCustomInput(id, val) {
-  const input = document.getElementById(id);
-  input.style.display = 'block';
-  input.value = val;
+  const inp = document.getElementById(id);
+  inp.style.display = 'block'; inp.value = val;
 }
 
 function onTimerToggle() {
-  const enabled = document.getElementById('timer-toggle').checked;
-  document.getElementById('timer-duration-section').style.display = enabled ? 'block' : 'none';
-}
-
-function openSettings() {
-  document.getElementById('sheet-overlay').classList.add('open');
-  document.getElementById('settings-sheet').classList.add('open');
-}
-
-function closeSettings() {
-  document.getElementById('sheet-overlay').classList.remove('open');
-  document.getElementById('settings-sheet').classList.remove('open');
+  document.getElementById('timer-duration-section').style.display =
+    document.getElementById('timer-toggle').checked ? 'block' : 'none';
 }
 
 function saveSettings() {
-  // Read num questions
-  const activePill = document.querySelector('#num-pills .pill-opt.active');
-  if (activePill?.dataset.val === 'custom') {
-    const val = parseInt(document.getElementById('num-custom').value);
-    if (!val || val < 1) { alert('Введите корректное число вопросов'); return; }
-    settings.numQuestions = Math.min(val, allQuestions.length || 199);
-  } else if (activePill) {
-    settings.numQuestions = parseInt(activePill.dataset.val);
+  const numPill = document.querySelector('#num-pills .pill-opt.active');
+  if (numPill?.dataset.val === 'custom') {
+    const v = parseInt(document.getElementById('num-custom').value);
+    if (!v || v < 1) { alert('Введите корректное число вопросов'); return; }
+    settings.numQuestions = Math.min(v, allQuestions.length || 199);
+  } else if (numPill) {
+    settings.numQuestions = parseInt(numPill.dataset.val);
   }
 
-  // Read timer
   settings.timerEnabled = document.getElementById('timer-toggle').checked;
 
   if (settings.timerEnabled) {
-    const activeDur = document.querySelector('#dur-pills .pill-opt.active');
-    if (activeDur?.dataset.val === 'custom') {
-      const val = parseInt(document.getElementById('dur-custom').value);
-      if (!val || val < 1) { alert('Введите корректную длительность'); return; }
-      settings.timerMinutes = val;
-    } else if (activeDur) {
-      settings.timerMinutes = parseInt(activeDur.dataset.val);
+    const durPill = document.querySelector('#dur-pills .pill-opt.active');
+    if (durPill?.dataset.val === 'custom') {
+      const v = parseInt(document.getElementById('dur-custom').value);
+      if (!v || v < 1) { alert('Введите корректную длительность'); return; }
+      settings.timerMinutes = v;
+    } else if (durPill) {
+      settings.timerMinutes = parseInt(durPill.dataset.val);
     }
   }
 
   saveSettingsToStorage();
   updateHomeText();
-  closeSettings();
+  closeAllSheets();
 }
 
 function resetSettings() {
   settings = { numQuestions: 25, timerEnabled: false, timerMinutes: 25 };
   saveSettingsToStorage();
-
-  // Reset UI
   setActivePill('num-pills', 25);
-  document.getElementById('num-custom').style.display = 'none';
-  document.getElementById('num-custom').value = '';
+  ['num-custom','dur-custom'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = 'none'; el.value = '';
+  });
   document.getElementById('timer-toggle').checked = false;
   document.getElementById('timer-duration-section').style.display = 'none';
   setActivePill('dur-pills', 25);
-  document.getElementById('dur-custom').style.display = 'none';
-  document.getElementById('dur-custom').value = '';
-
   updateHomeText();
 }
 
-// ── CONFETTI ──────────────────────────────────────────────────────────────────
+// ── Confetti ──────────────────────────────────────────
 function launchConfetti() {
-  const colors = ['#7c6ff7', '#2dd4a0', '#f26b6b', '#f5a623', '#a78bfa', '#fff'];
-  for (let i = 0; i < 60; i++) {
+  const colors = [
+    getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+    '#34D399','#F87171','#FBBF24','#fff','rgba(255,255,255,0.6)'
+  ];
+  for (let i = 0; i < 70; i++) {
     setTimeout(() => {
       const el = document.createElement('div');
       el.className = 'confetti-piece';
-      el.style.cssText = `
-        left:${Math.random() * 100}%;top:-10px;
-        background:${colors[Math.floor(Math.random() * colors.length)]};
-        animation-duration:${1.5 + Math.random() * 2}s;
-        animation-delay:${Math.random() * 0.5}s;
-        transform:rotate(${Math.random() * 360}deg);
-        width:${6 + Math.random() * 8}px;height:${6 + Math.random() * 8}px;
-      `;
+      el.style.cssText = `left:${Math.random()*100}%;top:-10px;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        animation-duration:${1.5+Math.random()*2}s;
+        animation-delay:${Math.random()*0.5}s;
+        transform:rotate(${Math.random()*360}deg);
+        width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;`;
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 3500);
-    }, i * 30);
+    }, i * 28);
   }
 }
 
-// ── START ─────────────────────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────
 init();

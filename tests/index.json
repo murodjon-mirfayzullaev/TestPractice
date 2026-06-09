@@ -1,14 +1,34 @@
 [
   {
     "id": "anatomy",
-    "label": "Анатомия · 2 семестр",
+    "label": "Анатомия",
+    "sublabel": "2 семестр · 199 вопросов",
     "file": "tests/anatomy.json",
-    "count": 199
+    "count": 199,
+    "icon": "🫀"
   },
   {
     "id": "patology",
-    "label": "Патология· 2 семестр",
+    "label": "Патология",
+    "sublabel": "2 семестр · 199 вопросов",
     "file": "tests/patology.json",
-    "count": 199
+    "count": 199,
+    "icon": "🔬"
+  },
+  {
+    "id": "english_to_be",
+    "label": "Using \"to be\"",
+    "sublabel": "A1–B1 · 30 вопросов",
+    "file": "tests/english_to_be.json",
+    "count": 30,
+    "icon": "📖"
+  },
+  {
+    "id": "english_conditionals",
+    "label": "Conditionals IF",
+    "sublabel": "A2–B2 · 18 вопросов",
+    "file": "tests/english_conditionals.json",
+    "count": 18,
+    "icon": "🎯"
   }
 ]

@@ -1,0 +1,20 @@
+[
+  {"q": "If you heat water to 100°C, it ___.", "c": ["boils"], "w": ["will boil", "would boil", "boiled"]},
+  {"q": "If it ___ tomorrow, we will cancel the picnic.", "c": ["rains"], "w": ["rained", "would rain", "will rain"]},
+  {"q": "If I ___ rich, I would travel the world.", "c": ["were"], "w": ["am", "will be", "would be"]},
+  {"q": "If she had studied harder, she ___ the exam.", "c": ["would have passed"], "w": ["would pass", "will pass", "had passed"]},
+  {"q": "If you ___ early, you will catch the train.", "c": ["leave"], "w": ["left", "would leave", "will leave"]},
+  {"q": "If I knew the answer, I ___ you.", "c": ["would tell"], "w": ["will tell", "told", "would have told"]},
+  {"q": "If he ___ his homework, he can play video games.", "c": ["finishes"], "w": ["finished", "would finish", "will finish"]},
+  {"q": "She would have called if she ___ your number.", "c": ["had known"], "w": ["knew", "knows", "would know"]},
+  {"q": "If water freezes, it ___ ice.", "c": ["becomes"], "w": ["became", "would become", "will become"]},
+  {"q": "If I ___ you, I would apologize immediately.", "c": ["were"], "w": ["am", "was", "would be"]},
+  {"q": "They ___ happy if you visited them more often.", "c": ["would be"], "w": ["will be", "are", "were"]},
+  {"q": "If she ___ earlier, she wouldn't have missed the bus.", "c": ["had left"], "w": ["left", "leaves", "would leave"]},
+  {"q": "If it stops raining, we ___ go for a walk.", "c": ["will"], "w": ["would", "might have", "had"]},
+  {"q": "He would have become a doctor if he ___ medicine.", "c": ["had studied"], "w": ["studied", "studies", "would study"]},
+  {"q": "If you mix red and blue paint, you ___ purple.", "c": ["get"], "w": ["got", "would get", "will get"]},
+  {"q": "If I ___ harder, I would pass my exam.", "c": ["studied"], "w": ["study", "had studied", "will study"]},
+  {"q": "What would you do if you ___ a million dollars?", "c": ["won"], "w": ["win", "have won", "will win"]},
+  {"q": "If they ___ the last bus, they would have taken a taxi.", "c": ["had missed"], "w": ["missed", "miss", "would miss"]}
+]
