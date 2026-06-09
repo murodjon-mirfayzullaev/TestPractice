@@ -3,6 +3,12 @@
     "id": "anatomy",
     "label": "Анатомия · 2 семестр",
     "file": "tests/anatomy.json",
-    "count": 204
+    "count": 199
+  },
+  {
+    "id": "patology",
+    "label": "Патология· 2 семестр",
+    "file": "tests/patology.json",
+    "count": 199
   }
 ]
