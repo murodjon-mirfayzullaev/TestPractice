@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тренажёр · Тесты</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HOME ── -->
+  <div id="screen-home" class="screen active">
+    <nav class="topbar">
+      <div class="logo">Трена<span>жёр</span></div>
+      <div class="test-selector-wrap">
+        <select class="test-selector" id="test-selector"></select>
+      </div>
+      <div class="topbar-right">
+        <button class="theme-btn" onclick="toggleTheme()" title="Сменить тему">☀️</button>
+      </div>
+    </nav>
+    <div class="home-inner">
+      <div class="home-badge">📚 Подготовка к экзамену</div>
+      <h1 class="home-title">Тренажёр<br><span class="line2">знаний</span></h1>
+      <p class="home-sub" id="home-sub">Загрузка вопросов…</p>
+      <div class="home-actions">
+        <button class="btn-primary" onclick="startTest()">▶ Начать тест</button>
+        <button class="btn-secondary" id="home-view-btn" onclick="showScreen('screen-allqs')">☰ Все вопросы</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALL QUESTIONS ── -->
+  <div id="screen-allqs" class="screen">
+    <nav class="topbar">
+      <button class="back-btn" onclick="showScreen('screen-home')">← Назад</button>
+      <div class="page-title" style="flex:1;padding:0 12px">Все вопросы</div>
+      <div class="topbar-right">
+        <span class="q-count-badge" id="qs-count-badge">—</span>
+        <button class="theme-btn" onclick="toggleTheme()">☀️</button>
+      </div>
+    </nav>
+    <div class="search-bar">
+      <input class="search-input" type="text" placeholder="🔍  Поиск по вопросам…"
+             id="search-input" oninput="filterQs()">
+    </div>
+    <div class="qs-list" id="qs-list"></div>
+  </div>
+
+  <!-- ── TEST ── -->
+  <div id="screen-test" class="screen">
+    <div class="test-topbar">
+      <button class="back-btn"
+        onclick="if(confirm('Выйти из теста? Прогресс будет потерян.')) showScreen('screen-home')">✕</button>
+      <div class="test-progress-wrap">
+        <div class="test-progress-bar" id="test-progress-bar" style="width:4%"></div>
+      </div>
+      <div class="test-qnum" id="test-qnum">1 / 25</div>
+    </div>
+    <div class="test-body">
+      <div class="test-inner">
+        <div class="q-type-chip single" id="q-type-chip">Один ответ</div>
+        <div class="q-text" id="test-q-text"></div>
+        <div class="hint-multi" id="hint-multi" style="display:none">
+          ☑ Выберите все правильные ответы (<strong id="hint-count">?</strong>), затем нажмите «Подтвердить»
+        </div>
+        <div class="options" id="test-options"></div>
+        <div class="confirm-row">
+          <button class="btn-confirm" id="btn-confirm" onclick="confirmAnswer()" disabled>Подтвердить</button>
+          <button class="btn-next" id="btn-next" onclick="nextQuestion()">Следующий →</button>
+          <button class="btn-finish" id="btn-finish" onclick="showResults()">Завершить тест 🎉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div id="screen-results" class="screen">
+    <nav class="topbar">
+      <div class="logo">Трена<span>жёр</span></div>
+      <div class="topbar-right">
+        <button class="theme-btn" onclick="toggleTheme()">☀️</button>
+      </div>
+    </nav>
+    <div class="result-body">
+      <div class="result-inner">
+        <div class="result-hero anim-scalein">
+          <div class="score-ring-wrap">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface3)" stroke-width="10"/>
+              <circle id="score-arc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)"
+                stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                style="transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"/>
+            </svg>
+            <div class="score-ring-text">
+              <div class="score-pct" id="score-pct-text">0%</div>
+              <div class="score-label">БАЛЛ</div>
+            </div>
+          </div>
+          <div class="result-title" id="result-title">Отличная работа!</div>
+          <div class="result-sub" id="result-sub">Вы завершили тест</div>
+          <div class="result-chips">
+            <div class="rchip green" id="rc-correct">✓ 0 правильно</div>
+            <div class="rchip red" id="rc-wrong">✗ 0 ошибок</div>
+            <div class="rchip blue">25 вопросов</div>
+          </div>
+        </div>
+
+        <div class="result-tabs">
+          <button class="rtab active" id="tab-all" onclick="switchTab('all')">Все вопросы</button>
+          <button class="rtab" id="tab-wrong" onclick="switchTab('wrong')">Ошибки <span id="tab-wrong-count"></span></button>
+          <button class="rtab" id="tab-right" onclick="switchTab('right')">Правильные <span id="tab-right-count"></span></button>
+        </div>
+
+        <div class="review-list" id="review-list"></div>
+
+        <div class="result-footer">
+          <button class="btn-primary" onclick="startTest()" style="flex:1">▶ Новый тест</button>
+          <button class="btn-secondary" onclick="showScreen('screen-home')" style="flex:1">🏠 На главную</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>

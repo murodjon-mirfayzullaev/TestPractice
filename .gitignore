@@ -1,0 +1,9 @@
+# Original source file
+anatomy_app.html
+
+# Claude IDE config
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
