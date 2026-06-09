@@ -1,3 +1,4 @@
+// ── STATE ─────────────────────────────────────────────────────────────────────
 let allQuestions = [];
 let testQuestions = [];
 let currentIndex = 0;
@@ -5,12 +6,24 @@ let answers = [];
 let activeTab = 'all';
 let darkMode = localStorage.getItem('theme') !== 'light';
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
+// Timer
+let timerInterval = null;
+let timerSecondsLeft = 0;
 
+// Settings (persisted in localStorage)
+let settings = {
+  numQuestions: 25,
+  timerEnabled: false,
+  timerMinutes: 25
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
+  loadSettingsFromStorage();
   applyTheme();
   syncThemeBtn();
   await loadTestIndex();
+  initSettingsSheet();
 }
 
 async function loadTestIndex() {
@@ -18,9 +31,7 @@ async function loadTestIndex() {
     const res = await fetch('tests/index.json');
     const tests = await res.json();
     populateSelector(tests);
-    if (tests.length > 0) {
-      await loadTest(tests[0].file, tests[0]);
-    }
+    if (tests.length > 0) await loadTest(tests[0].file, tests[0]);
   } catch (e) {
     console.error('Failed to load test index', e);
   }
@@ -47,23 +58,23 @@ async function loadTest(file, meta) {
   try {
     const res = await fetch(file);
     allQuestions = await res.json();
-    updateHomeText(meta);
+    updateHomeText();
     buildAllQsList(allQuestions);
   } catch (e) {
     console.error('Failed to load test file', e);
   }
 }
 
-function updateHomeText(meta) {
+function updateHomeText() {
   const count = allQuestions.length;
+  const n = Math.min(settings.numQuestions, count);
   document.getElementById('home-sub').textContent =
-    `${count} вопросов. Каждый тест — 25 случайных вопросов.`;
+    `${count} вопросов · В тесте ${n} случайных`;
   document.getElementById('home-view-btn').textContent =
     `☰ Все вопросы (${count})`;
 }
 
 // ── THEME ─────────────────────────────────────────────────────────────────────
-
 function applyTheme() {
   if (!darkMode) document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');
@@ -83,15 +94,18 @@ function toggleTheme() {
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
-
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
 }
 
-// ── ALL QUESTIONS ─────────────────────────────────────────────────────────────
+function exitTest() {
+  stopTimer();
+  showScreen('screen-home');
+}
 
+// ── ALL QUESTIONS ─────────────────────────────────────────────────────────────
 function buildAllQsList(list) {
   const cont = document.getElementById('qs-list');
   cont.innerHTML = '';
@@ -128,24 +142,27 @@ function filterQs() {
 }
 
 // ── TEST ──────────────────────────────────────────────────────────────────────
-
 function shuffle(arr) {
   return arr.slice().sort(() => Math.random() - 0.5);
 }
 
 function startTest() {
   if (allQuestions.length === 0) return;
-  testQuestions = shuffle(allQuestions).slice(0, 25);
+  const n = Math.min(settings.numQuestions, allQuestions.length);
+  testQuestions = shuffle(allQuestions).slice(0, n);
   currentIndex = 0;
   answers = new Array(testQuestions.length).fill(null);
   showScreen('screen-test');
   renderQuestion();
+  if (settings.timerEnabled) startTimer(settings.timerMinutes * 60);
+  else stopTimer();
 }
 
 function renderQuestion() {
   const q = testQuestions[currentIndex];
   const total = testQuestions.length;
   const isMulti = q.c.length > 1;
+  const isLast = currentIndex === total - 1;
 
   document.getElementById('test-qnum').textContent = `${currentIndex + 1} / ${total}`;
   document.getElementById('test-progress-bar').style.width = `${((currentIndex + 1) / total) * 100}%`;
@@ -159,11 +176,14 @@ function renderQuestion() {
   hint.style.display = isMulti ? 'block' : 'none';
   if (isMulti) document.getElementById('hint-count').textContent = q.c.length;
 
-  document.getElementById('btn-confirm').style.display = 'inline-flex';
-  document.getElementById('btn-confirm').disabled = true;
-  document.getElementById('btn-next').style.display = 'none';
-  document.getElementById('btn-finish').style.display = 'none';
+  // Sticky next button
+  const btn = document.getElementById('btn-next-sticky');
+  const lbl = document.getElementById('btn-next-label');
+  btn.disabled = true;
+  btn.className = 'btn-next-sticky' + (isLast ? ' finish' : '');
+  lbl.textContent = isLast ? 'Завершить тест 🎉' : 'Следующий вопрос →';
 
+  // Render options
   const allOpts = shuffle([...q.c, ...q.w]);
   const cont = document.getElementById('test-options');
   cont.innerHTML = '';
@@ -191,52 +211,78 @@ function handleOptClick(div, isMulti) {
     });
     div.classList.add('selected');
     div.querySelector('input').checked = true;
-    document.getElementById('btn-confirm').disabled = false;
   } else {
     const inp = div.querySelector('input');
     inp.checked = !inp.checked;
     div.classList.toggle('selected', inp.checked);
-    document.getElementById('btn-confirm').disabled =
-      !document.querySelectorAll('.opt-btn input:checked').length;
   }
+  // Enable button as soon as something is selected
+  const anySelected = !!document.querySelectorAll('.opt-btn input:checked').length;
+  document.getElementById('btn-next-sticky').disabled = !anySelected;
 }
 
-function confirmAnswer() {
+function handleNext() {
+  // Record answer silently
   const q = testQuestions[currentIndex];
   const selected = [...document.querySelectorAll('.opt-btn input:checked')].map(i => i.value);
-  const correctSet = new Set(q.c);
   const selectedSet = new Set(selected);
   const isRight = q.c.length === selected.length && q.c.every(c => selectedSet.has(c));
-
   answers[currentIndex] = { q: q.q, selected, correct: q.c, isRight };
-
-  document.querySelectorAll('.opt-btn').forEach(btn => btn.classList.add('disabled'));
-  document.getElementById('btn-confirm').style.display = 'none';
 
   const isLast = currentIndex === testQuestions.length - 1;
   if (isLast) {
-    document.getElementById('btn-finish').style.display = 'inline-flex';
+    showResults();
   } else {
-    document.getElementById('btn-next').style.display = 'inline-flex';
+    currentIndex++;
+    renderQuestion();
   }
 }
 
-function nextQuestion() {
-  currentIndex++;
-  renderQuestion();
+// ── TIMER ─────────────────────────────────────────────────────────────────────
+function startTimer(seconds) {
+  stopTimer();
+  timerSecondsLeft = seconds;
+  const display = document.getElementById('timer-display');
+  display.style.display = 'flex';
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timerSecondsLeft--;
+    updateTimerDisplay();
+    if (timerSecondsLeft <= 0) {
+      stopTimer();
+      showResults();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const display = document.getElementById('timer-display');
+  if (display) display.style.display = 'none';
+}
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timerSecondsLeft / 60);
+  const secs = timerSecondsLeft % 60;
+  document.getElementById('timer-text').textContent =
+    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  const display = document.getElementById('timer-display');
+  if (timerSecondsLeft <= 60) display.classList.add('danger');
+  else display.classList.remove('danger');
 }
 
 // ── RESULTS ───────────────────────────────────────────────────────────────────
-
 function showResults() {
+  stopTimer();
   const correct = answers.filter(a => a && a.isRight).length;
   const total = testQuestions.length;
   const pct = Math.round((correct / total) * 100);
 
   showScreen('screen-results');
 
+  // Animate score ring (r=60 → circumference = 2π×60 ≈ 376.99)
   setTimeout(() => {
-    const circ = 2 * Math.PI * 52;
+    const circ = 2 * Math.PI * 60;
     const offset = circ - (pct / 100) * circ;
     const arc = document.getElementById('score-arc');
     arc.style.stroke = pct >= 80 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
@@ -246,14 +292,15 @@ function showResults() {
 
   const titles =
     pct >= 90 ? ['🏆 Превосходно!', 'Вы настоящий эксперт по анатомии'] :
-    pct >= 72 ? ['✅ Хорошо!', 'Вы сдали бы этот тест'] :
-    pct >= 50 ? ['📚 Неплохо', 'Ещё немного практики'] :
-                ['💪 Продолжайте!', 'Нужно больше повторений'];
+    pct >= 72 ? ['✅ Хорошо!', 'Вы бы сдали этот тест'] :
+    pct >= 50 ? ['📚 Неплохо', 'Ещё немного практики — и будет отлично'] :
+                ['💪 Продолжайте!', 'Больше повторений — больше уверенности'];
 
   document.getElementById('result-title').textContent = titles[0];
   document.getElementById('result-sub').textContent = titles[1];
   document.getElementById('rc-correct').textContent = `✓ ${correct} правильно`;
   document.getElementById('rc-wrong').textContent = `✗ ${total - correct} ошибок`;
+  document.getElementById('rc-total').textContent = `${total} вопросов`;
   document.getElementById('tab-wrong-count').textContent = `(${total - correct})`;
   document.getElementById('tab-right-count').textContent = `(${correct})`;
 
@@ -281,7 +328,7 @@ function renderReview(tab) {
   if (!toShow.length) {
     list.innerHTML = `<div class="no-mistakes">
       <div class="big">${tab === 'wrong' ? '🎉' : '📝'}</div>
-      ${tab === 'wrong' ? 'Ошибок нет!' : 'Нет правильных ответов'}
+      ${tab === 'wrong' ? 'Ошибок нет — отличный результат!' : 'Нет правильных ответов'}
     </div>`;
     return;
   }
@@ -324,8 +371,142 @@ function renderReview(tab) {
   }).join('');
 }
 
-// ── CONFETTI ──────────────────────────────────────────────────────────────────
+// ── SETTINGS SHEET ────────────────────────────────────────────────────────────
+function loadSettingsFromStorage() {
+  const saved = localStorage.getItem('quiz_settings');
+  if (saved) {
+    try { Object.assign(settings, JSON.parse(saved)); } catch (e) {}
+  }
+}
 
+function saveSettingsToStorage() {
+  localStorage.setItem('quiz_settings', JSON.stringify(settings));
+}
+
+function initSettingsSheet() {
+  // Set pill active states from current settings
+  setActivePill('num-pills', settings.numQuestions);
+  document.getElementById('timer-toggle').checked = settings.timerEnabled;
+  document.getElementById('timer-duration-section').style.display =
+    settings.timerEnabled ? 'block' : 'none';
+  setActivePill('dur-pills', settings.timerMinutes);
+
+  // Show custom inputs if needed
+  if (!['10','20','25','50'].includes(String(settings.numQuestions))) {
+    showCustomInput('num-custom', settings.numQuestions);
+  }
+  if (settings.timerEnabled && !['10','20','25'].includes(String(settings.timerMinutes))) {
+    showCustomInput('dur-custom', settings.timerMinutes);
+  }
+
+  // Wire up pill clicks
+  wirePills('num-pills', 'num-custom');
+  wirePills('dur-pills', 'dur-custom');
+}
+
+function wirePills(groupId, customInputId) {
+  document.querySelectorAll(`#${groupId} .pill-opt`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`#${groupId} .pill-opt`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const customInput = document.getElementById(customInputId);
+      if (btn.dataset.val === 'custom') {
+        customInput.style.display = 'block';
+        customInput.focus();
+      } else {
+        customInput.style.display = 'none';
+        customInput.value = '';
+      }
+    });
+  });
+}
+
+function setActivePill(groupId, val) {
+  const pills = document.querySelectorAll(`#${groupId} .pill-opt`);
+  const known = Array.from(pills)
+    .filter(p => p.dataset.val !== 'custom')
+    .map(p => p.dataset.val);
+
+  pills.forEach(p => p.classList.remove('active'));
+
+  if (known.includes(String(val))) {
+    const target = document.querySelector(`#${groupId} .pill-opt[data-val="${val}"]`);
+    if (target) target.classList.add('active');
+  } else {
+    const customPill = document.querySelector(`#${groupId} .pill-opt[data-val="custom"]`);
+    if (customPill) customPill.classList.add('active');
+  }
+}
+
+function showCustomInput(id, val) {
+  const input = document.getElementById(id);
+  input.style.display = 'block';
+  input.value = val;
+}
+
+function onTimerToggle() {
+  const enabled = document.getElementById('timer-toggle').checked;
+  document.getElementById('timer-duration-section').style.display = enabled ? 'block' : 'none';
+}
+
+function openSettings() {
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('settings-sheet').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('settings-sheet').classList.remove('open');
+}
+
+function saveSettings() {
+  // Read num questions
+  const activePill = document.querySelector('#num-pills .pill-opt.active');
+  if (activePill?.dataset.val === 'custom') {
+    const val = parseInt(document.getElementById('num-custom').value);
+    if (!val || val < 1) { alert('Введите корректное число вопросов'); return; }
+    settings.numQuestions = Math.min(val, allQuestions.length || 199);
+  } else if (activePill) {
+    settings.numQuestions = parseInt(activePill.dataset.val);
+  }
+
+  // Read timer
+  settings.timerEnabled = document.getElementById('timer-toggle').checked;
+
+  if (settings.timerEnabled) {
+    const activeDur = document.querySelector('#dur-pills .pill-opt.active');
+    if (activeDur?.dataset.val === 'custom') {
+      const val = parseInt(document.getElementById('dur-custom').value);
+      if (!val || val < 1) { alert('Введите корректную длительность'); return; }
+      settings.timerMinutes = val;
+    } else if (activeDur) {
+      settings.timerMinutes = parseInt(activeDur.dataset.val);
+    }
+  }
+
+  saveSettingsToStorage();
+  updateHomeText();
+  closeSettings();
+}
+
+function resetSettings() {
+  settings = { numQuestions: 25, timerEnabled: false, timerMinutes: 25 };
+  saveSettingsToStorage();
+
+  // Reset UI
+  setActivePill('num-pills', 25);
+  document.getElementById('num-custom').style.display = 'none';
+  document.getElementById('num-custom').value = '';
+  document.getElementById('timer-toggle').checked = false;
+  document.getElementById('timer-duration-section').style.display = 'none';
+  setActivePill('dur-pills', 25);
+  document.getElementById('dur-custom').style.display = 'none';
+  document.getElementById('dur-custom').value = '';
+
+  updateHomeText();
+}
+
+// ── CONFETTI ──────────────────────────────────────────────────────────────────
 function launchConfetti() {
   const colors = ['#7c6ff7', '#2dd4a0', '#f26b6b', '#f5a623', '#a78bfa', '#fff'];
   for (let i = 0; i < 60; i++) {
@@ -333,14 +514,12 @@ function launchConfetti() {
       const el = document.createElement('div');
       el.className = 'confetti-piece';
       el.style.cssText = `
-        left:${Math.random() * 100}%;
-        top:-10px;
+        left:${Math.random() * 100}%;top:-10px;
         background:${colors[Math.floor(Math.random() * colors.length)]};
         animation-duration:${1.5 + Math.random() * 2}s;
         animation-delay:${Math.random() * 0.5}s;
         transform:rotate(${Math.random() * 360}deg);
-        width:${6 + Math.random() * 8}px;
-        height:${6 + Math.random() * 8}px;
+        width:${6 + Math.random() * 8}px;height:${6 + Math.random() * 8}px;
       `;
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 3500);
@@ -349,5 +528,4 @@ function launchConfetti() {
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
-
 init();
